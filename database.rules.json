@@ -1,0 +1,49 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "organization_memberships": { "$organization": { "$uid": {
+      ".read": "auth != null && auth.uid === $uid",
+      ".write": false,
+      ".validate": "newData.hasChildren(['role','status']) && newData.child('status').val() === 'active'"
+    } } },
+    "bus_status": { "$organization": { "$bus": {
+      ".read": "auth != null && root.child('organization_memberships').child($organization).child(auth.uid).child('status').val() === 'active'",
+      ".write": "auth != null && (root.child('source_leases').child($organization).child($bus).child('userId').val() === auth.uid || root.child('organization_memberships').child($organization).child(auth.uid).child('role').val() === 'organization_admin' || root.child('organization_memberships').child($organization).child(auth.uid).child('role').val() === 'organization_owner')",
+      ".validate": "newData.hasChildren(['isLive','status','updatedAt']) && !newData.hasChild('latitude') && !newData.hasChild('longitude')"
+    } } },
+    "bus_live": { "$organization": { "$bus": {
+      ".read": "auth != null && root.child('organization_memberships').child($organization).child(auth.uid).child('status').val() === 'active' && (root.child('wallets').child(auth.uid).child('premiumUntil').val() > now || root.child('source_leases').child($organization).child($bus).child('userId').val() === auth.uid || root.child('organization_memberships').child($organization).child(auth.uid).child('role').val() === 'organization_admin' || root.child('organization_memberships').child($organization).child(auth.uid).child('role').val() === 'organization_owner')",
+      ".write": "auth != null && root.child('source_leases').child($organization).child($bus).child('userId').val() === auth.uid"
+    } } },
+    "contributors": { "$organization": { "$bus": { "$uid": {
+      ".read": "auth != null && (auth.uid === $uid || root.child('organization_memberships').child($organization).child(auth.uid).child('role').val() === 'organization_admin' || root.child('organization_memberships').child($organization).child(auth.uid).child('role').val() === 'organization_owner')",
+      ".write": "auth != null && auth.uid === $uid && root.child('organization_memberships').child($organization).child(auth.uid).child('status').val() === 'active'"
+    } } } },
+    "source_leases": { "$organization": { "$bus": {
+      ".read": "auth != null && root.child('organization_memberships').child($organization).child(auth.uid).child('status').val() === 'active'",
+      ".write": "auth != null && root.child('contributors').child($organization).child($bus).child(auth.uid).exists() && (!data.exists() || data.child('leaseExpiresAt').val() <= now || data.child('userId').val() === auth.uid)",
+      ".validate": "!newData.exists() || (newData.child('userId').val() === auth.uid && newData.child('leaseExpiresAt').val() <= now + 65000)"
+    } } },
+    "active_trips": { "$organization": { "$bus": {
+      ".read": "auth != null && root.child('organization_memberships').child($organization).child(auth.uid).child('status').val() === 'active'",
+      ".write": "auth != null && root.child('source_leases').child($organization).child($bus).child('userId').val() === auth.uid"
+    } } },
+    "trip_history": { "$organization": { "$trip": {
+      ".read": "auth != null && root.child('organization_memberships').child($organization).child(auth.uid).child('status').val() === 'active'",
+      ".write": "auth != null && newData.child('busId').isString() && root.child('source_leases').child($organization).child(newData.child('busId').val()).child('userId').val() === auth.uid"
+    } } },
+    "wallets": { "$uid": {
+      ".read": "auth != null && auth.uid === $uid",
+      ".write": "auth != null && auth.uid === $uid && ((newData.child('tokens').val() === data.child('tokens').val() - 10 && newData.child('premiumUntil').val() > now && newData.child('premiumUntil').val() <= now + 86405000) || (!data.child('freeTokensClaimed').exists() && newData.child('freeTokensClaimed').val() === true && newData.child('tokens').val() === (data.child('tokens').isNumber() ? data.child('tokens').val() : 0) + 100))",
+      ".validate": "newData.child('tokens').isNumber() && newData.child('tokens').val() >= 0"
+    } },
+    "token_transactions": { "$uid": { ".read": "auth != null && auth.uid === $uid", "$transaction": {
+      ".write": "auth != null && auth.uid === $uid && ((newData.child('type').val() === 'PASS_PURCHASE' && newData.child('amount').val() === -10) || (newData.child('type').val() === 'WELCOME_GIFT' && newData.child('amount').val() === 100))"
+    } } },
+    "contribution_summaries": { "$organization": { "$summary": {
+      ".read": "auth != null && (root.child('organization_memberships').child($organization).child(auth.uid).child('role').val() === 'organization_admin' || root.child('organization_memberships').child($organization).child(auth.uid).child('role').val() === 'organization_owner')",
+      ".write": "auth != null && newData.child('userId').val() === auth.uid && newData.child('status').val() === 'PENDING'"
+    } } }
+  }
+}
