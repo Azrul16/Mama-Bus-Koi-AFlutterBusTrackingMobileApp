@@ -188,6 +188,31 @@ missing.
 Linux Firebase initialization is intentionally unsupported until a Linux-capable
 Firebase implementation and configuration are selected.
 
+### Firebase keys and secret-scanning alerts
+
+Firebase client API keys identify the Firebase project but do not authorize
+database access by themselves. They are still kept out of Git so repository
+history and automated secret scanners remain clean. Apply Android package and
+SHA certificate restrictions, web referrer restrictions, and API restrictions
+to every client key in Google Cloud Console. Firebase Security Rules and App
+Check remain mandatory because an environment file cannot hide values compiled
+into a distributed mobile or web application.
+
+If a key is accidentally committed:
+
+1. Restrict or rotate the exposed key in Google Cloud Console.
+2. Replace it in the ignored local `.env` and platform configuration files.
+3. Remove it from every reachable Git branch and tag; deleting only the latest
+   file does not remove it from earlier commits.
+4. Rebuild and test authentication with the replacement configuration.
+5. Resolve the GitHub secret-scanning alert only after documenting the action
+   taken. Contact GitHub Support if an old pull-request object still exposes a
+   rewritten commit.
+
+Never store Firebase Admin SDK credentials or other server-side secrets in Dart
+defines. Keep them exclusively in a trusted backend or encrypted CI secret
+store, and revoke them immediately if they are exposed.
+
 ### Google sign-in
 
 Android uses the native Google account chooser. Add both debug and release SHA-1
