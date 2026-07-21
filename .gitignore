@@ -1,0 +1,91 @@
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.orig
+*.swp
+*.tmp
+*~
+.DS_Store
+.atom/
+.build/
+.buildlog/
+.history
+.svn/
+.swiftpm/
+migrate_working_dir/
+
+# IntelliJ related
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# Editors
+.vscode/
+
+# Flutter/Dart/Pub related
+**/doc/api/
+**/ios/Flutter/.last_build_id
+.dart_tool/
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+**/build/
+/coverage/
+.packages
+pubspec_overrides.yaml
+
+# Symbolication related
+app.*.symbols
+
+# Obfuscation related
+app.*.map.json
+
+# Android Studio will place build artifacts here
+/android/app/debug
+/android/app/profile
+/android/app/release
+
+# Android local configuration and signing material
+/android/local.properties
+/android/key.properties
+*.jks
+*.keystore
+
+# Apple generated and local dependency state
+**/ios/Pods/
+**/macos/Pods/
+**/ios/.symlinks/
+**/macos/.symlinks/
+**/ios/Flutter/ephemeral/
+**/macos/Flutter/ephemeral/
+**/xcuserdata/
+**/DerivedData/
+
+# Desktop generated intermediates
+**/linux/flutter/ephemeral/
+**/windows/flutter/ephemeral/
+
+# Firebase CLI local state and trusted server credentials
+.firebase/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+/android/app/google-services.json
+/ios/Runner/GoogleService-Info.plist
+/macos/Runner/GoogleService-Info.plist
+*-firebase-adminsdk-*.json
+service-account*.json
+
+# Environment files (commit an example file instead)
+.env
+.env.*
+!.env.example
+
+# Local databases, reports, and crash artifacts
+*.db
+*.sqlite
+*.sqlite3
+*.hprof
+*.dmp
