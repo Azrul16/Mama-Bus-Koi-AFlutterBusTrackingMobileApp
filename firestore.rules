@@ -1,0 +1,80 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function profile() { return get(/databases/$(database)/documents/users/$(request.auth.uid)).data; }
+    function platformAdmin() { return signedIn() && profile().role == 'platform_admin' && profile().active == true; }
+    function membershipId(orgId) { return orgId + '_' + request.auth.uid; }
+    function membership(orgId) {
+      return get(/databases/$(database)/documents/organization_memberships/$(membershipId(orgId))).data;
+    }
+    function member(orgId) {
+      return signedIn() && membership(orgId).userId == request.auth.uid &&
+        membership(orgId).organizationId == orgId && membership(orgId).status == 'active';
+    }
+    function orgAdmin(orgId) {
+      return member(orgId) && membership(orgId).role in ['organization_owner', 'organization_admin'];
+    }
+
+    match /users/{uid} {
+      allow read: if signedIn() && (uid == request.auth.uid || platformAdmin());
+      allow create: if signedIn() && uid == request.auth.uid && request.resource.data.role == 'user';
+      allow update: if signedIn() && uid == request.auth.uid &&
+        request.resource.data.role == resource.data.role &&
+        request.resource.data.active == resource.data.active;
+      allow update: if platformAdmin();
+      match /favorites/{busId} { allow read, write: if signedIn() && uid == request.auth.uid; }
+    }
+
+    match /organization_memberships/{id} {
+      allow read: if signedIn() && (resource.data.userId == request.auth.uid ||
+        orgAdmin(resource.data.organizationId) || platformAdmin());
+      allow create: if signedIn() && request.resource.data.userId == request.auth.uid &&
+        id == request.resource.data.organizationId + '_' + request.auth.uid &&
+        ((request.resource.data.role == 'user' &&
+          get(/databases/$(database)/documents/organizations/$(request.resource.data.organizationId)).data.accessMode == 'public') ||
+         (request.resource.data.role == 'organization_owner' &&
+          getAfter(/databases/$(database)/documents/organizations/$(request.resource.data.organizationId)).data.createdBy == request.auth.uid));
+      allow update: if orgAdmin(resource.data.organizationId) || platformAdmin();
+      allow delete: if platformAdmin() ||
+        (signedIn() && resource.data.userId == request.auth.uid && resource.data.role != 'organization_owner');
+    }
+
+    match /organizations/{organizationId} {
+      allow list: if signedIn() && resource.data.accessMode != 'private';
+      allow get: if signedIn() && (resource.data.accessMode != 'private' || member(organizationId) || platformAdmin());
+      allow create: if signedIn() && request.resource.data.createdBy == request.auth.uid &&
+        request.resource.data.status == 'trial' && request.resource.data.plan == 'free';
+      allow update: if orgAdmin(organizationId) || platformAdmin();
+      allow delete: if platformAdmin();
+      match /buses/{id} { allow read: if member(organizationId); allow write: if orgAdmin(organizationId) && !('routeId' in request.resource.data); }
+      match /routes/{id} { allow read: if member(organizationId); allow write: if orgAdmin(organizationId); }
+      match /schedules/{id} { allow read: if member(organizationId); allow write: if orgAdmin(organizationId); }
+      match /chat_messages/{messageId} {
+        allow read: if member(organizationId);
+        allow create: if member(organizationId) &&
+          request.resource.data.organizationId == organizationId &&
+          request.resource.data.senderId == request.auth.uid &&
+          request.resource.data.text is string &&
+          request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 500 &&
+          request.resource.data.expiresAt > request.time + duration.value(119, 'm') &&
+          request.resource.data.expiresAt <= request.time + duration.value(121, 'm');
+        allow update: if false;
+        allow delete: if member(organizationId) && resource.data.expiresAt <= request.time;
+      }
+    }
+
+    match /organization_subscriptions/{organizationId} {
+      allow read: if orgAdmin(organizationId) || platformAdmin();
+      allow create: if signedIn() && request.resource.data.plan == 'free' &&
+        getAfter(/databases/$(database)/documents/organizations/$(organizationId)).data.createdBy == request.auth.uid;
+      allow write: if platformAdmin();
+    }
+    match /referralClaims/{claimId} {
+      allow create: if signedIn() && claimId == request.auth.uid && request.resource.data.claimantUserId == request.auth.uid && request.resource.data.status == 'PENDING';
+      allow read: if signedIn() && (resource.data.claimantUserId == request.auth.uid || platformAdmin());
+      allow update: if platformAdmin() && resource.data.status == 'PENDING' && request.resource.data.status in ['APPROVED', 'REJECTED'];
+      allow delete: if false;
+    }
+  }
+}
